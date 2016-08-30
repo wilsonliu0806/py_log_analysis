@@ -12,7 +12,7 @@ import os
 import datetime
 import gzip
 import json
-
+from config import *
 def get_access_log_file(accessPathDir):
     '''list all the file name giving dir'''
     fileList=os.listdir(accessPathDir)
@@ -189,13 +189,9 @@ def format_result(result):
 
 def mainfun():
     #build move out dic
-    path_ssd_move_log = 'E:\\python_file\\ssd_move.log'
-    path_access_log = 'E:\\python_file\\accesslog'
     dicMoveOut={}
     dicMoveIn={}
     get_move_out_dic(path_ssd_move_log,dicMoveOut,dicMoveIn)
-    start_date = datetime.datetime(2016,7,24)
-    end_date = datetime.datetime(2016,7,25)
     print('dicMoveOut len Before',len(dicMoveOut))
     dicMoveOut = move_out_filter(start_date,end_date,dicMoveOut)
     print('dicMoveOut len After',len(dicMoveOut))
@@ -234,6 +230,9 @@ def load_and_statics(url):
 
 #Start Func
 if __name__ == '__main__':
+    Sel = input("1 for create json,2 for load json and analysis")
+    if Sel == '1':
+        mainfun()
     fpurl = open('resulturl.json','r')
     resulturl = json.load(fpurl)
     flowTotal = 0
