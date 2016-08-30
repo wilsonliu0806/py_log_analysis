@@ -13,6 +13,7 @@ import datetime
 import gzip
 import json
 from config import *
+import progressbar
 def get_access_log_file(accessPathDir):
     '''list all the file name giving dir'''
     fileList=os.listdir(accessPathDir)
@@ -102,10 +103,12 @@ url_pos=6
 #modify later
 def url_scan_access_get_flow(url,accessPath,acessFileList,result):
     fileCnt = len(acessFileList);
+    bar = progressbar.ProgressBar(max_value = fileCnt)
     fileNo = 0
     for file in acessFileList:
         fileNo += 1
-        print(fileNo,'/',fileCnt)
+        #print(fileNo,'/',fileCnt)
+        bar.update(fileNo)
         accesslog = os.path.join(accessPath,file)
         with gzip.open(accesslog) as f:
             for line in f:  
@@ -197,8 +200,7 @@ def mainfun():
     print('dicMoveOut len After',len(dicMoveOut))
     print('build move out dic finish!')
     #build access log dic
-    accessPath = "E:\\python_file\\accesslog"
-    acessFileList=get_access_log_file(accessPath)
+    acessFileList=get_access_log_file(path_access_log)
     print('build_url_startup_file start!')
     #build_url_startup_file(acessFileList,dicMoveOut,urlStartup)
     urlStartup={url.encode():'1' for url in dicMoveOut }
