@@ -1,0 +1,6 @@
+*.pyc
+*.json
+Include/
+Lib/
+Scripts/
+*.sql
