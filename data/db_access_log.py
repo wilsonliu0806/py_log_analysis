@@ -1,52 +1,14 @@
 import sqlalchemy
 from sqlalchemy import create_engine
-from sqlalchemy import Table,Column,Integer,String,MetaData,ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.types import DateTime
-
+from db_modele import *
 import os
 import gzip
 import datetime
+import sys
 
 
-Base = declarative_base()
-class StoreStat(Base):
 
-    __tablename__='store_stat'
-
-    store_stat_id = Column(Integer,primary_key=True)
-
-    url = Column(String(1024))
-    path = Column(String(256))
-    file_sz = Column(Integer)
-    timestamp = Column(DateTime)
-    lastref = Column(DateTime)
-    refcount = Column(Integer)
-
-class AccessLog(Base):
-
-    __tablename__="access_log"
-
-    access_log_id  = Column(Integer,primary_key=True)
-    url_id = Column(Integer)
-    hit = Column(Integer)
-    date = Column(DateTime)
-
-    def __repr__(self):
-        return "<date %s url_id %d status %d >" %(date,url_id,hit)
-    
-class AccessLogRaw(Base):
-
-    __tablename__='access_log_raw'
-
-    access_log_id  = Column(Integer,primary_key=True)
-    url = Column(String(1024))
-    hit = Column(String(32))
-    date = Column(DateTime)
-
-    def __repr__(self):
-        return "<date %s url_id %s status %d >" %(date,url,hit)
 engine = create_engine('mysql+mysqldb://root:root@localhost/squidlog')
 metadata = MetaData(engine)
 Base.metadata.create_all(engine)
@@ -54,6 +16,19 @@ Session = sessionmaker(bind = engine)
 sess = Session() 
 month_cvt = {'Jan':'1','Feb':'2','Mar':'3','Apr':'4','May':'5','Jun':'6','Jul':'7'\
 ,'Aug':'8','Sep':'9','Oct':'10','Nov':'11','Dec':'12'}
+
+start_file = '0' 
+start_read = False
+start_line = -1 
+start_line_read = False
+
+for i in range(1,len(sys.argv)):
+    if(i == 1):
+        start_file = sys.argv[i]
+        print(start_file)
+    if(i == 2):
+        start_line = int(sys.argv[i])
+        print(start_line)
 
 def get_hit_type_b(line):
     for item in line:
@@ -80,6 +55,7 @@ def import_access_log():
     Field=""
     time_pos=3
     url_pos=6
+    size_pos=9
     #Analysis Begin
     for file in fileList:
         file_cnt = 0
@@ -94,7 +70,7 @@ def import_access_log():
         accesslog = os.path.join(accessPath,file)  
         with gzip.open(accesslog) as f:
         #with open(accesslog) as f: 
-            file_cnt +=1
+            print("FileName:[",file,"]")
             i = 0
             for line in f:
                 j=0
@@ -110,12 +86,14 @@ def import_access_log():
                 #hit status as {hit_type,time}  
                 #import item
                 if 'gz' in accesslog:
-                    url = str[url_pos].decode()
+                    url = str[url_pos]#.decode()
                     hit_type = get_hit_type_b(str)
+                    size = str[size_pos]
                     time_detail = str[time_pos].decode()
                 else:
                     url = str[url_pos]
                     hit_type = get_hit_type(str)
+                    size = str[size_pos]
                     time_detail = str[time_pos]
                 #import item end
                 status = hit_status.get(url)
@@ -132,17 +110,68 @@ def import_access_log():
                 if(len(time_detail)<10):
                     continue
                 time_detail = time_detail[1:]
-                print(time_detail)
-                time_detail = convert_time(time_detail)
-                access_detail = AccessLogRaw(url = url,hit=hit_type,date=time_detail)
+                try:
+                    time_detail = convert_time(time_detail)
+                except:
+                    pass
+                if(len(url)>1024):
+                    continue
+                access_detail = AccessLogRaw(url = url,hit=hit_type,date=time_detail,size=size)
                 i=i+1
                 sess.add(access_detail)
-                if(i == 10):
+                if(i%100 == 0):
                     sess.commit()
-                    break
-            print("FileName:[",file,"]")
-            if(file_cnt == 2):
-                break
-        # print("Get Total Request ",i)
+            sess.commit()
+
 def import_store_stat():
+
+    start_read = True
+    start_line_read = True 
     store_stat_path="E:\\python_file\\store_stat"
+    filelist = os.listdir(store_stat_path)
+    for file in filelist:
+        print(file)
+        if start_file in file:
+            start_read=True
+            print("File Start read")
+        if not start_read:
+            print(file)
+            print("Skip")
+            continue
+        store_stat_log = os.path.join(store_stat_path,file)
+        print(store_stat_log)
+        with open(store_stat_log) as f:
+            linenum = 0
+            for line in f:
+                linenum +=1
+                if not start_line_read:
+                    if(linenum > start_line):
+                        print("Start Reading...")
+                        start_line_read = True
+                if (start_line_read == False):
+                    continue
+                strline = line.split(' ')
+                if(len(strline)<7):
+                    print(strline)
+                    continue
+                url = strline[0]
+                path = strline[1]
+                cur_sz = strline[2]
+                swap_sz = strline[3]
+                timestamp = datetime.datetime.fromtimestamp(int(strline[4]))
+                lastref = datetime.datetime.fromtimestamp(int(strline[5]))
+                refcount = strline[6]
+                store_stat_detail = StoreStat(url=url,path=path,cur_file_sz=cur_sz,swap_file_sz = swap_sz\
+                ,timestamp = timestamp,lastref=lastref,refcount=refcount)
+                sess.add(store_stat_detail)
+                if(linenum % 100 == 0):
+                    print(linenum)
+                    sess.commit()
+
+if __name__ == "__main__":
+    #import_store_stat()
+    import_access_log()
+                
+
+
+

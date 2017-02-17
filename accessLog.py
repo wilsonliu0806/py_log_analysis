@@ -10,6 +10,7 @@ fileList=os.listdir(accessPath)
 Field=""
 time_pos=3
 url_pos=6
+size_pos=9
 
 def get_access_num(url):
     access_num = 0
@@ -25,8 +26,9 @@ def get_access_num(url):
 def show_hit_status(url):
     dic_hit_time = hit_status[url]
     for hit_type in dic_hit_time:
-        print(hit_type,":",len(dic_hit_time[hit_type]),end=' ')
-    print()
+        #print(hit_type,":",len(dic_hit_time[hit_type]),end=' ')
+        print("show_hit_status")
+    #print()
 
 def get_hit_type(line):   
     for item in line:
@@ -126,6 +128,7 @@ for file in fileList:
                 url = str[url_pos].decode()
                 hit_type = get_hit_type_b(str)
                 time_detail = str[time_pos].decode()
+                size = str[size_pos]
             else:
                 url = str[url_pos]
                 hit_type = get_hit_type(str)
